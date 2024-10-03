@@ -4,8 +4,5 @@ icon: fas fa-info-circle
 order: 4
 ---
 
-- H
-- I
-- T
-- e
-- r
+- HITer
+- 努力上岸中......
