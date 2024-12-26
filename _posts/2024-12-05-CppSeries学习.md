@@ -75,9 +75,6 @@ class的默认访问权限是`private`的，而struct的默认访问权限是`pu
 2. 把构造函数声明为`delete`（C++提供默认构造函数）
 
 
-### 单例模式
-
-
 ### 虚函数
 
 虚函数引入了一种叫做动态联编（Dynamic Dispatch），它通过虚函数表（v-table）来实现编译。
@@ -300,7 +297,7 @@ int main()
 
 ### 智能指针
 
-使用普通指针的话，需要手动分配内存，并在使用完后释放内存。如果忘记释放内存，就会导致内存泄露；而如果对同一块内存进行多次释放，可能会产生错误。所以使用智能指针可以帮助我们更方便、更安全地管理动态分配的内存。
+使用普通指针的话，需要手动分配内存，并在使用完后释放内存。如果忘记释放内存，就会导致内存泄漏；而如果对同一块内存进行多次释放，可能会产生错误。所以使用智能指针可以帮助我们更方便、更安全地管理动态分配的内存。
 - 在`<memory>`库中
 - C++11引入
 
@@ -641,3 +638,859 @@ int main()
 *注*：模板不应该被完全禁止，也不应该疯狂地滥用（Cherno‘ s opinion）
 
 
+### 宏定义
+
+适用于不用configuration的输出。例如在Debug模式下，需要使用`LOG`打印一些消息，但是在Release模式下，需要取消打印日志，则可以使用宏来进行处理。
+
+```cpp
+#ifdef _DEBUG
+#define LOG(x)  std::cout << x << std::endl;
+#else
+#define LOG(x)
+#endif
+```
+
+
+```cpp
+#ifdef _DEBUG == 1
+#define LOG(x)  std::cout << x << std::endl;
+#elif defined(NDEBUG)
+#define LOG(x)
+#endif
+```
+
+使用宏的时候，还可以利用反斜杠来转义换行符，使其经过预处理后在同一行
+
+```cpp
+#define MAIN int main() \
+{\
+	std::cout << "hello" << std::endl;\
+}
+```
+
+
+### auto关键字
+
+```cpp
+std::string GetName()
+{
+	return "Cherno";
+}
+
+int main()
+{
+	auto name = GetName();
+
+	int a = name.size();
+}
+```
+
+好处
+- 在使用API的时候，这个函数的返回值可能会改变，但是客户端不需要做任何的改动
+坏处
+- 不知道API的返回值已经改变，可能会破坏依赖于特定类型的代码
+
+建议的使用场景：对于长类型的变量，可以使用`auto`关键字；但对于`int`，`float`这种就不需要使用了，会降低代码的可读性。
+
+```cpp
+	for (auto it = strs.begin(); it != strs.end(); it++)
+	{
+		std::cout << *it << std::endl;
+	}
+```
+
+### array的使用
+
+std::array是静态数组，存储在栈中
+
+```cpp
+	std::array<int ,5> data = { 4, 3, 6, 2, 5};
+	data[0] = 9;
+	
+	std::cout << data.size();
+```
+
+优点
+- 自动存储数组大小，传参的时候只需一个参数（和传统数组比较）
+- 速度和传统数组差不多，没有性能成本
+- 在调式模式下，可以防止数组越界
+- 等等
+
+### 函数指针
+
+```cpp
+void PrintValue(int a)
+{
+	std:::cout << "value: " << a << std::endl;
+}
+
+int main()
+{
+	void(*func1)(int) = PrintValue;
+	auto func2 = PrintValue;    // 或者直接使用auto关键字
+	
+	func1(8);
+	func2(8);
+}
+```
+
+使用场景：将一个函数传递给一个api
+
+```cpp
+void ForEach(const std::vector<int>& values, void(*func)(int))
+{
+	for (int value : values)
+		func(value);
+}
+
+int main()
+{
+	std::vector<int> values = { 4, 2, 5, 2};
+	ForEach(values, PrintValue);
+}
+```
+
+
+### 匿名函数lambda
+
+只要有一个函数指针，就可以使用匿名函数
+- 非捕获lambda可以隐式转化为函数指针
+- 而捕获lambda不可以，需要使用`std::function`
+
+```cpp
+int main()
+{
+	std::vector<int> values = { 4, 2, 5, 2};
+	auto lambda = [](int value) {std::cout << "value: " << value << std::endl; };
+	ForEach(values, lambda);
+}
+```
+
+```cpp
+#include <algorithm>
+
+int main()
+{
+	std::vector<int> values = { 4, 2, 5, 2};
+	auto it = std::find_if(values.begin(), values.end(), [](int value) { return value > 3;})
+	std::cout << *it << std::endl;
+}
+```
+
+
+### using namspace std的使用讨论
+
+**命名空间**：避免命名冲突，允许我们在不同的上下文中调用相同的符号。通常在构建一个代码库，或是在自己的项目中使用。
+
+不使用`using namspace std;`的好处是我们能直接看出哪些函数是标准库的，这样很直观，很容易分辨不同命名空间下的函数，如`std::vector`和`eastl::vector`。在大型项目中，尽量不要使用，更不能写在头文件中，难以调试。但对于小项目，比如你自己写一个小游戏，但是没啥问题。尽量写在局部作用域之内，比如函数或`if-else`语句之内。
+
+
+### 计时
+
+使用`chrono`库，不依赖于平台
+
+```cpp
+int main()
+{
+	using namespace std::literals::chrono_literals;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	std::this_thread::sleep_for(1s);
+	auto end = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<float> duration = end - start;
+	std::cout << duration.count() << "s" << std::endl;
+}
+```
+
+
+### 多维数组的动态分配
+
+```cpp
+int main()
+{
+	// 二维数组
+	int** a2d = new int*[5];
+	for (int i = 0; i < 5; i++)
+		a2d[i] = new int[5];
+
+	// 三维数组
+	int*** a3d = new int**[5];
+	for (int i = 0; i < 5; i++)
+	{
+		a3d[i] = new int*[5];
+		for (int j = 0; j < 5; j++)
+		{
+			a3d[i][j] = new int[5];
+		}
+	}
+}
+```
+
+
+### 排序
+
+```cpp
+#include <vector>
+#include <algorithm>
+#include <functional>
+
+int main()
+{
+	std::vector<int> values = { 3, 5, 2, 1, 4 };
+	
+	std::sort(values.begin(), values.end(), [](int a, int b){ return a > b; });
+
+	std::sort(values.begin(), values.end(), std::greater<int>());
+}
+```
+
+
+### 类型双关
+
+绕过类型系统，简单地说，就是将同样的内存以不同的方式解读 
+
+```cpp
+int main()
+{
+	int a = 50;
+	double value = *(double*)&a;
+}
+```
+
+在这里，`value`获得了与`a`相同的内存内容，但是其中只有4个字节是合法的，剩余4个是不属于我们的内存，这是不安全的，仅用于演示
+
+```cpp
+struct Entity
+{
+	int x, y;
+}
+
+int main()
+{
+	Entity e = { 5, 8 };
+
+	int* position = (int*)&e;
+	std::cout << position[0] << ", " << position[1] << std::endl;
+
+	int y = *(int*)((char*)&e + 4);
+	std::cout << y << std::endl;
+}
+```
+
+可以将这个结构体看成`int`数组，另外，也可以以`char`的形式访问
+
+
+### 联合体
+
+当需要使用多种方法来处理相同的数据时，可以使用联合体。这其实就是类型双关，只不过使用联合体更直观
+
+```cpp
+struct Vector2
+{
+	float x, y;
+}
+
+struct Vector4
+{
+	union
+	{
+		struct
+		{
+			float x, y, z, w;
+		};
+		struct
+		{
+			Vector2 a, b;
+		};
+	};
+};
+
+void PrintVector2(const Vector& vector)
+{
+	std::cout << vector.x << ", " << vector.y << std::endl;
+}
+
+int main()
+{
+	Vector4 vector = { 1.0f, 2.0f, 3.0f, 4.0f };
+	PrintVector2(vector.a);
+	PrintVector2(vector.b);
+	vector.z = 500.0f;
+	std::cout << "------------------" << std::endl;
+	PrintVector2(vector.a);
+	PrintVector2(vector.b);
+}
+```
+
+
+### 虚析构函数
+
+```cpp
+class Base
+{
+public:
+	Base() { ... }
+	~Base() { ... }
+}
+
+class Derived : public Base
+{
+public:
+	Derived() { m_array = new int[5]; ... }
+	~Derived() { delete[] m_array; ... }
+private:
+	int* m_array;
+}
+```
+
+```cpp
+	Derived* derived = new Derived();
+	delete derived;
+```
+
+当声明一个派生类实例，然后释放它，则基类和派生类的构造函数、析构函数都会被调用。
+
+```cpp
+	Base* poly = new Derived();
+	delete poly;
+```
+
+而当使用多态时，这个多态实例只会调用基类和派生类的构造函数，还有基类的析构函数，不会调用派生类的析构函数，这很容易造成内存泄漏。
+
+```cpp
+class Base
+{
+public:
+	Base() { ... }
+	virtual ~Base() { ... }
+}
+```
+
+所以需要将基类的析构函数声明为虚函数，这样编译器才会去调用派生类的析构函数，这样才能安全地扩展这个类。
+
+
+### 类型转换
+
+c语言风格的强类型转换
+
+```cpp
+	double a = 5.35;
+	int b = (double)a;
+```
+
+c++语言风格的类型转换，使用c语言的强转都能做到，但是它多了一些检查，增加了一些安全机制，更容易查找和追溯问题
+
+1. **静态转换**（`static_cast）
+
+将一种数据类型的值强制转换为另一种数据类型的值，但不进行任何运行时类型检查
+
+```cpp
+	double value = 3.2;
+	double s = static_cast<int>(value) + 5.4;
+```
+
+2. **动态转换**（`dynamic_cast`）
+
+专门用于继承层次结构的指针转换，主要用在将基类指针或引用转化为派生类指针或引用的情况（或者相反），在运行时进行类型检查，如果不能转换则返回空指针或引发异常
+
+```cpp
+class Base
+{
+	...
+}
+
+class Derived : public Base
+{
+	...
+}
+
+class AnotherClass : public Base
+{
+	...
+}
+
+int main()
+{
+	Base* ptr = new Derived();
+	AnotherClass* p = dynamic_cast<AnotherClass*>(ptr);
+	if (p)
+	{
+		...
+	}
+}
+```
+
+这里`p`将得到一个`nullptr`，因为`ptr`是`Derived`类型的，不是`AnotherClass`类型的
+
+动态转换之所以能够运行，是因为开启了运行时类型信息（runtime type information，RTTI），它存储我们的所有类型运行时的类型信息，会增加一定的开销
+
+3. **常量转换**（`const_cast`）
+
+用于将`const`类型的对象转换为非`const`类型的对象，但是不能改变对象的类型
+
+```cpp
+	const int i = 10;
+	int& r = const_cast<int&>(i);
+```
+
+
+4. **重新解释转换**（`reinterpret_cast`）
+
+将一个数据类型的值重新解释为另一个数据类型的值，但是不会进行任何类型检查
+
+```cpp
+	int num = 1234;
+	float x = reinterpret_cast<float&>(i);
+```
+
+
+### 预编译头文件
+
+> Precompiled Header，PCH
+
+将常用的头文件通通放到一个头文件中，并将该头文件预先编译成二进制形式，提高编译效率
+
+- 将每个源文件常用的头文件放到预编译头文件中，如`<vector>`、`<string>`、`<iostream>`等标准库头文件，以及项目的公共头文件
+- 不要把频繁更改的文件放进预编译头文件中
+
+visual studio默认将它命名为`stdafx.h`或`pch.h`
+
+使用方法：（假设已有`pch.h`文件）
+1. visual studio：创建一个`pch.cpp`文件，编写`#include "pch.h"`，并将该cpp文件的属性的"预编译头"设置为"创建"。然后将项目属性的"预编译头"设置为"使用"，并设置预编译头文件为"`pch.h`"即可。
+2. g++：`g++ -std=c++11 pch.h`，然后生成`pch.h.gch`文件即可
+
+
+### 基准测试
+
+- 需要确保被测量的东西是实际上被编译的代码。因为编译器可以优化代码，甚至完全更改代码，可能你所测量的那部分代码已经被优化成其他形式，不是按照原有形式进行的。
+- 在debug模式下，对测试性能不是很友好，因为有很多额外的安全措施。确保最终在release模式下进行测试
+
+```cpp
+class Timer
+{
+public:
+	Timer()
+	{
+		m_StartTimepoit = std::chrono::high_resolution_clock::now();
+	}
+	~Timer()
+	{
+		Stop();
+	}
+	void Stop()
+	{
+		auto endTimepoint = std::chrono::high_resolution_clock::now();
+		auto start = std::chrono::time_point_cast<std::chrono::microseconds>(m_StartTimepoit).time_since_epoch().count();
+		auto end = std::chrono::time_point_cast<std::chrono::microseconds>(endTimepoint).time_since_epoch().count();
+
+		auto duration = end - start;
+		double ms = duration * 0.001;
+
+		std::cout << duration << "us (" << ms << "ms)\n";
+	}
+private:
+	std::chrono::time_point<std::chrono::high_resolution_clock> m_StartTimepoit;
+};
+
+int main()
+{
+	{
+		Timer timer;
+		// 需要测试的代码
+		...
+	}
+}
+```
+
+
+### RAII
+
+> Resource Acquisition Is Initialization，资源获取即初始化
+
+它是c++的一种管理资源、避免资源泄漏的方法，利用栈对象自动销毁的特点来实现。通过构造函数来获取资源，析构函数来释放资源。像智能指针和互斥锁等就是这个原理。
+
+
+### 结构化绑定
+
+> Structured bindings（c++17特性）
+
+在多返回值的情况下，可以快速简洁地获取变量。
+
+```cpp
+std::tuple<std::string, int> CreatePerson()
+{
+	return { "lreverse", 21 };
+}
+
+int main()
+{
+	// 方法1
+	auto person = CreatePerson();
+	std::string& name = std::get<0>(person);
+	int age = std::get<1>(person);
+
+	// 方法2
+	std::string name;
+	int age;
+	std::tie(name, age) = CreatePerson();
+
+	// 方法3：结构化绑定
+	auto[name, age] = CreatePerson();
+}
+```
+
+
+### std::optional的使用
+
+> c++17特性
+
+数据可能存在，也可能不存在，可以使用`optional`库来存储变量
+
+```cpp
+#include <iostream>
+#include <fstream>
+#include <optional>
+
+std::optional<std::string> ReadFileAsString(const std::string& filepath)
+{
+	std::ifstream stream(filepath);
+	if (stream)
+	{
+		std::string result;
+		// read file
+		stream.close();
+		return result;
+	}
+	return {};
+}
+
+int main()
+{
+	std::optional<std:::string> data = ReadFileAsString("data.txt");
+	std::string value = data.value_or("present"); // 可以设置默认值
+	
+	if (data)  // if (data.has_value())
+	{
+		std::cout << "File read successfully!\n";
+	}
+	else
+	{
+		std::cout << "File could not opened!\n";
+	}
+}
+```
+
+
+### std::variant的使用
+
+> c++17特性
+
+单一变量存放多种类型的数据
+
+```cpp
+#include <iostream>
+#include <variant>
+
+int main()
+{
+	std::variant<std::string, int> data;
+
+	// 使用get
+	data = "lreverse";
+	std::cout << std::get<std::string>(data) << "\n";
+	
+	data = 2;
+	std::cout << std::get<int>(data) << "\n";
+
+	// 使用get_if，用来判断当下所使用的数据类型
+	if (auto value = std::get_if<std::stiring>(&data))
+	{
+		std::string& v = *value;
+	}
+	else
+	{
+		// ...
+	}
+	
+}
+```
+
+```cpp
+enum class ErrorCode
+{
+	None = 0, NotFound = 1, NoAcess = 2
+};
+
+std::variant<std::string, ErrorCode>ReadFileAsString()
+{
+	//...
+}
+```
+
+- `variant`变量是更加安全，不会造成未定义的行为，它会将所有可能的数据类型存储为单独的变量作为单独的成员，其大小是所有类型的总和
+- 除非在做底层优化，或其他需要保持低内存等事情，否则尽量使用`variant`
+
+
+### std::any的使用
+
+> c++17
+
+单个变量中存储任意类型的数据
+
+```cpp
+#include <iostream>
+#include <any>
+
+int main()
+{
+	std::any data;
+	data = 2;
+	data = "lreverse";
+	data = std::string("lreverse");
+}
+```
+
+对于小类型的变量来说，它的工作方式与variant类似；对于大类型的变量来说，它会动态分配内存
+
+*注*：如果有需求，尽量使用variant，它是any的安全版本。
+
+
+### std::async的使用
+
+> c++11特性
+
+`std::async`用于启动一个异步任务，简单地说，就是让一个函数在一个独立的线程中执行。调用`std::async`的线程可以继续执行其他任务，无需等待被调用函数执行完毕。
+- 在`<future>`库中
+- 有两种策略：
+	- `std::launch::async`：函数必须在一个新的线程中异步执行
+	- `std::launch::deferred`：函数的执行会被延迟，直到在`std::future`对象上调用`get()`或者`wait()`函数
+
+`std::async`与`std::thread`的区别
+
+1. `std::thread`用于创建一个线程，这个线程是一定会被创建的，如果系统资源紧张，强行创建可能会导致系统的崩溃；`std::async`则根据不同的策略创建异步任务
+2. `std::async`返回一个`std::future`对象，可以获取异步任务的结果，该结果还可以存储任务执行过程中抛出的异常；但是`std::thread`不能返回执行结果
+3. `std::thread`需要显示地调用`join`或`detach`来管理线程的生命周期；而`std::async`则是与相关联的`std::future`对象紧密相关
+	1. `std::launch::async`：从调用者的角度来看，当通过`std::future`对象获取任务结果（调用`get()`函数）或者等待任务完成（调用`wait()`函数）时，调用者会阻塞，直到异步任务执行完毕
+	2. `std::launch::deferred`：任务实际上并没有立即执行，而是在`std::future`对象的`get()`或`wait()`函数被调用时，任务在调用`get()`或`wait()`的线程（通常是主线程）中同步执行。
+
+```cpp
+void doSomething(std::string filepath) {}
+
+int main()
+{
+	std::vector<std::future<void>> future;
+	for (const auto& file : paths)
+	{
+		future.push_back(std::async(std::launch::async, doSomething, file));
+	}
+}
+```
+
+*注*：
+- 线程函数的参数按值移动或复制，如果要将引用参数传递给线程函数，则必须要被包装，通常使用`std::ref`，例如：`std::ref(num)`，这样的话，传递给线程函数的`num`就是一个引用了
+- 写异步需要考虑作用域结束的问题
+
+
+### 让字符串更快
+
+在处理字符串时，会在不经意间增加内存的分配。在处理实时运行的程序时，比如游戏，这是会对性能造成影响的，会损害帧率。
+- 可以使用·`string_view`
+- c++17特性
+
+```cpp
+#include <iostream>
+#include <string>
+
+static uint32_t s_AllocCount = 0;
+
+// 重载new运算符，统计分配的次数
+void* operator new(size_t size)
+{
+	s_AllocCount++;
+	std::cout << "Allocating " << size << " bytes\n";
+	return malloc(size);
+}
+```
+
+1. 情况一：分配了1次
+
+```cpp
+void printName(const std::string& name)
+{
+	std::cout << name << std::endl;
+};
+
+int main()
+{
+	std::string name = "lreverse";
+
+	printName(name);
+	// printName("lreverse");
+	std::cout << s_AllocCount << " allocations" << std::endl;
+	std::cin.get();
+}
+```
+
+在这种情况下，定义变量`name`的时候，`string`类会分配内存。直接传入字符串字面量也会隐式转换成`string`类，也会分配内存。
+
+2. 情况二：分配了3次
+
+```cpp
+void printName(const std::string& name)
+{
+	std::cout << name << std::endl;
+};
+
+int main()
+{
+	std::string name = "www lreverse";
+
+	std::string	firstName = name.substr(0, 3);
+	std::string lastName = name.substr(4, 8);
+
+	printName(lastName);
+	std::cout << s_AllocCount << " allocations" << std::endl;
+	std::cin.get();
+}
+```
+
+道理同上。
+
+3. 优化一：分配了1次
+
+```cpp
+void printName(std::string_view name)
+{
+	std::cout << name << std::endl;
+};
+
+int main()
+{
+	std::string name = "www lreverse";
+
+	std::string_view firstName(name.c_str(), 3);
+	std::string_view lastName(name.c_str() + 4, 8);
+
+	printName(lastName);
+	std::cout << s_AllocCount << " allocations" << std::endl;
+	std::cin.get();
+}
+```
+
+这一次分配只有`name`的分配，`string_view`实际上就是指向了原字符串
+
+4. 优化二：分配了0次
+
+```cpp
+void printName(std::string_view name)
+{
+	std::cout << name << std::endl;
+};
+
+int main()
+{
+	const char* name = "www lreverse";
+
+	std::string_view firstName(name, 3);
+	std::string_view lastName(name + 4, 8);
+
+	printName(lastName);
+	std::cout << s_AllocCount << " allocations" << std::endl;
+	std::cin.get();
+}
+```
+
+总结：多使用`const char*`和`string_view`
+
+
+### 可视化基准测试
+
+使用谷歌自带的可视化工具[tracing](chrome://tracing)，现在似乎已经更新到[perfetto](https://ui.perfetto.dev/)，原有的tracing不在更新，但还可以用。
+
+- cherno源码地址：[cherno's visual benchmark code](https://gist.github.com/TheCherno/31f135eea6ee729ab5f26a6908eb3a5e)
+
+**插桩**（Instrumentation）是一种在程序运行时动态修改代码的技术。它可以用来监控、记录和分析程序的运行状态，包括方法调用、参数传递、返回值等信息
+
+tracing要求的json文件示例：
+
+```json
+{
+  "traceEvents": [
+    {"name": "Asub", "cat": "PERF", "ph": "B", "pid": 22630, "tid": 22630, "ts": 829},
+    {"name": "Asub", "cat": "PERF", "ph": "E", "pid": 22630, "tid": 22630, "ts": 833}
+  ],
+  "displayTimeUnit": "ns",
+  "systemTraceEvents": "SystemTraceData",
+  "otherData": {
+    "version": "My Application v1.0"
+  },
+  "stackFrames": {...}
+  "samples": [...],  
+}
+```
+
+**traceEvents 数组**中的每个元素代表一个性能事件
+- `name`：用于标识事件的名称
+- `cat`（category）：这个属性用于定义事件的类别
+- `ph`（phase）：表示事件的阶段。常见的值有 “B”（begin，表示事件开始）和 “E”（end，表示事件结束）。这可以用于计算事件的持续时间。
+- `ts`（timestamp）：记录事件开始的时间戳，通常是从某个起始时间点开始计算的微秒或纳秒数，用于确定事件发生的时间顺序。
+- `pid`和`tid`：用于区分不同的进程和线程。这有助于在多进程或多线程环境中定位事件发生的位置。
+- `args`：这是一个对象，用于存储与事件相关的其他参数。
+
+### 单例模式
+
+> Singleton Pattern
+
+单例模式是一种设计模式，它确保一个类只有一个实例，并提供一个全局访问点来访问这个实例。c++中的单例只是一种组织一堆全局变量和静态函数的方法，就像命名空间一样，本质上就是一个单一的命名空间
+
+- 该类不能被公开创造
+- 该类不能被复制
+
+**懒汉式**
+
+只有当需要使用到实例时，才回去创建实例
+
+```cpp
+class Singleton
+{
+public:
+	Singleton(const Singleton& other) = delete;
+	static Singleton& GetInstance()
+	{
+		static Singleton s_instance;
+		return s_instance;
+	}
+	void DoSomething() {}
+private:
+	Singleton() {}
+	~Singleton() {}
+}
+```
+
+这里使用静态局部变量，只有在第一次调用`GetInstance`时，该实例才会被创建。在c++11下，静态局部变量是线程安全的。
+
+**饿汉式**
+
+系统一运行，就会初始化创建实例，需要时可直接调用
+
+```cpp
+class Singleton
+{
+public:
+	Singleton(const Singleton& other) = delete;
+	static Singleton& GetInstance()
+	{
+		return s_instance;
+	}
+	void DoSomething() {}
+private:
+	Singleton() {}
+	~Singleton() {}
+	static Singleton s_instance;
+}
+
+Singleton Singleton::s_instance;
+```
+
+该方法也是线程安全的。
