@@ -1,7 +1,7 @@
 ---
 title: bettercap的使用
 date: 2024-04-11 21:26:47 +0800
-categories: [tools, 渗透]
+categories: [Tools, 渗透]
 math: true
 ---
 
