@@ -45,6 +45,13 @@ $ bundle
 
 Please see the [theme's docs](https://github.com/cotes2020/jekyll-theme-chirpy#documentation).
 
+run the site locally
+
+```console
+bundle exec jekyll s
+```
+
+
 ## Contributing
 
 The contents of this repository are automatically updated when new releases are made to the [main repository][chirpy].  
