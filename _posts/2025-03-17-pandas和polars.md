@@ -16,7 +16,7 @@ mermaid: true
 
 （以下介绍均来自[深度求索](https://chat.deepseek.com/)）
 
-### pandas介绍
+## pandas介绍
 
 诞生于2008年，是 Python 数据科学生态的核心工具之一
 
@@ -32,7 +32,7 @@ mermaid: true
 官方文档：[pandas documentation](https://pandas.pydata.org/docs/)
 
 
-### polars介绍
+## polars介绍
 
 用 Rust 编写，支持多线程和查询优化，速度比 Pandas 快数倍甚至数十倍
 - 采用 Apache Arrow 内存格式，减少不必要的内存复制
@@ -43,27 +43,292 @@ mermaid: true
 API文档：[Python API reference — Polars documentation](https://docs.pola.rs/api/python/stable/reference/index.html)
 
 
-### 对比
+## polars
+
+### 创建数据帧
 
 ```python
 import polars as pl
+import datetime as dt
 
-df_pd = pd.DataFrame(
-    {
-        "name": ["alice", "ben", "chole", "daniel"],
-        "age": [23, 21, 20, 24],
-        "weight": [57.9, 72.5, 53.6, 83.1]
-    }
-)
+df = pl.DataFrame({
+    'name': ['Alice Archer', 'Bob Brown', 'Charlie Cooper', 'David Donovan'],
+    'birthdate': [
+        dt.date(1990, 1, 1),
+        dt.date(1985, 5, 15),
+        dt.date(2000, 12, 31),
+        dt.date(1995, 7, 20)
+    ],
+    'weight': [55.5, 70.2, 65.0, 80.1],
+    'height': [1.65, 1.80, 1.75, 1.90],
+})
+```
 
-df_pl = pd.DataFrame(
-    {
-        "name": ["alice", "ben", "chole", "daniel"],
-        "age": [23, 21, 20, 24],
-        "weight": [57.9, 72.5, 53.6, 83.1]
-    }
+### 数据查看
+
+```python
+df.head()       # 前5行
+df.tail(3)      # 后3行
+df.shape        # (行数，列数)
+df.columns      # 列名
+df.schema       # 列名和数据类型
+df.describe()   # 统计描述
+```
+
+### 数据选择
+
+
+#### 选择列
+
+```python
+df['name', 'weight']
+
+df.select(["name", 'weight'])
+
+df.select(pl.col('name', 'weight'))
+```
+
+#### 选择行
+
+```python
+df[0]
+df[1:3] 
+```
+
+#### 条件选择
+
+```python
+df.filter(pl.col('weight') > 60)
+
+df.filter(pl.col('weight') > 60)
+```
+
+### 数据操作
+
+#### 添加列
+
+```python
+df = df.with_columns(
+    pl.Series("salary", [5000, 6000, 7000, 4000]),
+    (dt.date.today().year - pl.col('birthdate').dt.year()).alias('age'),
+    bmi=pl.col('weight') / (pl.col('height') ** 2),
+    is_adult=pl.lit(True),
 )
 ```
 
-#### 列的引用
+#### 删除列
 
+```python
+df = df.drop('salary')
+```
+
+#### 列重命名
+
+```python
+df.rename({'old_name': 'new_name'})
+```
+
+
+#### 排列
+
+```python
+df.sort('age', descending=True)
+```
+
+#### 分组聚合
+
+```python
+df.group_by(
+    decade=pl.col('birthdate').dt.year() // 10 * 10
+).agg(
+    pl.len().alias('sample_size'),
+    pl.col('weight').mean().alias('avg_weight'),
+    pl.col('height').max().alias('tallest'),
+)
+```
+
+#### 合并
+
+连接
+
+```python
+df2 = pl.DataFrame({
+    "name": ["Bob Brown", "David Donovan", "Alice Archer", 'Eliy Smith'],
+    "has_kid": [True, False, False, False],
+    "siblings": [1, 2, 4, 6],
+})
+
+joined = df.join(df2, on='name', how='left').sort('name')
+```
+
+垂直合并
+
+```python
+df3 = pl.DataFrame({
+    "name": ["Ethan Edwards", "Fiona Foster", "Grace Gibson", "Henry Harris"],
+    "birthdate": [
+        dt.date(1977, 5, 10),
+        dt.date(1975, 6, 23),
+        dt.date(1973, 7, 22),
+        dt.date(1971, 8, 3),
+    ],
+    "weight": [67.9, 72.5, 57.6, 93.1],
+    "height": [1.76, 1.6, 1.66, 1.8],
+})
+
+results = pl.concat([df, df3], how='vertical').sort('name')
+```
+
+#### 处理缺失值
+
+```python
+# 检查缺失值
+df.null_count()
+
+# 删除包含缺失值的行
+df.drop_nulls()
+
+# 填充缺失值
+df.fill_null(0)
+```
+
+#### 应用函数
+
+```python
+df.select(pl.col('age').map_elements(lambda x: x + 1))
+```
+
+### 数据输入/输出
+
+#### 读取数据
+
+```python
+pl.read_csv('file.csv')
+
+pl.read_parquet('file.parquet')
+```
+
+#### 写入数据
+
+```python
+df.write_csv('output.csv')
+df.write_parquet('output.parquet')
+```
+
+### 数据帧转换
+
+```python
+pd_df = pl_df.to_pandas()
+
+pl_df = pl.from_pandas(pd_df)
+```
+
+
+## pandas
+
+### 创建数据帧
+
+```python
+import pandas as pd
+import datetime as dt
+
+df = pd.DataFrame({
+    'name': ['Alice Archer', 'Bob Brown', 'Charlie Cooper', 'David Donovan'],
+    'birthdate': [
+        dt.date(1990, 1, 1),
+        dt.date(1985, 5, 15),
+        dt.date(2000, 12, 31),
+        dt.date(1995, 7, 20)
+    ],
+    'weight': [55.5, 70.2, 65.0, 80.1],
+    'height': [1.65, 1.80, 1.75, 1.90],
+})
+```
+
+### 数据选择
+
+#### 选择列
+
+```python
+df['name']
+
+df[['name', 'weight']]
+```
+
+#### 选择行
+
+基于位置
+
+```python
+# 返回series
+df.iloc[0]
+
+# 返回dataframe
+df.iloc[[0, 2, 3]]  
+df.iloc[0:3]
+
+# 选择元素
+df.iloc[2, 0]  # 返回'Charlie Cooper'
+```
+
+基于标签
+
+```python
+
+```
+
+#### 条件选择
+
+```python
+df[df['age'] > 20]
+df[(df['age'] > 20) & (df['weight'] > 60)]
+```
+
+### 数据操作
+
+#### 添加列
+
+```python
+df['salary'] = [5000, 6000, 7000, 4000]
+```
+
+#### 删除列
+
+```python
+df.drop('salary', axis=1, inplace=True)
+```
+
+#### 排序
+
+```python
+df.sort_values('age', ascending=False)
+```
+
+#### 分组聚合
+
+```python
+df.groupby('age')['weight'].mean()
+```
+
+
+#### 处理缺失值
+
+```python
+df.isnull()       # 检查缺失值
+df.dropna()       # 删除包含缺失值的行
+df.fillna(value)  # 填充缺失值
+```
+
+#### 合并
+
+连接
+
+```python
+pd.merge(df1, df2, on='key_column')
+```
+
+垂直合并
+
+```python
+pd.concat([df1, df2])
+```

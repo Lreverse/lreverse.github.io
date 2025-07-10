@@ -37,7 +37,7 @@ Sign in to GitHub and [**use this template**][use-template] to generate a brand 
 
 Then clone it to your local machine and run:
 
-```console
+```bash
 $ bundle
 ```
 
@@ -47,7 +47,7 @@ Please see the [theme's docs](https://github.com/cotes2020/jekyll-theme-chirpy#d
 
 run the site locally
 
-```console
+```bash
 bundle exec jekyll s
 ```
 
