@@ -92,16 +92,23 @@ df.select(pl.col('name', 'weight'))
 
 ```python
 df[0]
-df[1:3] 
+df[1:3]
 ```
 
 #### 条件选择
 
 ```python
-df.filter(pl.col('weight') > 60)
-
-df.filter(pl.col('weight') > 60)
+df.filter(
+    pl.col('weight') > 60 &
+    (pl.col('height')).is_in([1.75, 1.90])
+)
+"""
+与：&
+或：|
+非：~
+"""
 ```
+
 
 ### 数据操作
 
@@ -179,6 +186,7 @@ df3 = pl.DataFrame({
 results = pl.concat([df, df3], how='vertical').sort('name')
 ```
 
+
 #### 处理缺失值
 
 ```python
@@ -217,12 +225,23 @@ df.write_parquet('output.parquet')
 
 ### 数据帧转换
 
+#### polars和pandas相互转换
+
+使用的都是polars的方法
+
 ```python
 pd_df = pl_df.to_pandas()
 
 pl_df = pl.from_pandas(pd_df)
 ```
 
+#### 转换成字典
+
+```python
+df.to_dicts()
+
+df.rows(named=True) 
+```
 
 ## pandas
 
@@ -331,4 +350,13 @@ pd.merge(df1, df2, on='key_column')
 
 ```python
 pd.concat([df1, df2])
+```
+
+
+### 数据帧转换
+
+#### 转化成字典
+
+```python
+df.to_dict("records")
 ```
