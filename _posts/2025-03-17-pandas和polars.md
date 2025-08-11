@@ -283,24 +283,29 @@ df[['name', 'weight']]
 df.iloc[0]
 
 # 返回dataframe
-df.iloc[[0, 2, 3]]  
-df.iloc[0:3]
+df.iloc[[0, 2, 3]]  # 返回第0, 2, 3行
+df.iloc[0:2]        # 返回0到第1行 (切片是开区间)
 
 # 选择元素
 df.iloc[2, 0]  # 返回'Charlie Cooper'
 ```
 
-基于标签
+基于标签（需要使用索引，也可以使用默认索引，默认生成从0开始的整数索引）
 
 ```python
-
+df.loc[1, 'weight']
+df.loc[0:2]         # 返回0到第2行 (切片是闭区间)
 ```
+
 
 #### 条件选择
 
 ```python
 df[df['age'] > 20]
 df[(df['age'] > 20) & (df['weight'] > 60)]
+
+df.loc[df['age'] > 20]
+df.loc[df['age'] > 20, 'weight'] = 75.0   # 直接修改原df
 ```
 
 ### 数据操作
